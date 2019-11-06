@@ -17,8 +17,10 @@ volatile unsigned char TimerFlag = 0; //TimerISR() sets this to 1, C program cle
 //variables for mapping AVR TSR
 unsigned long _avr_timer_M = 1; //start count from here down to zero, default = 1ms
 unsigned long _avr_timer_cntcurr = 0; //internal count of ticks (1ms)
+unsigned char ThreeLeds = 0x00;
+unsigned char BlinkingLeds = 0x00;
 unsigned char tmpB = 0x00; //initializes variable
-enum States{start, lightA, lightB, lightC}state;
+enum threeStates{start, lightA, lightB, lightC}threeState;
 
 void TimerOn() {
 	//avr timer/cnter
@@ -60,33 +62,66 @@ void TimerSet(unsigned long M) {
 	_avr_timer_M = M;
 	_avr_timer_cntcurr = _avr_timer_M;
 }
-void lightTick(){
-	switch(state)
+void ThreeLedsSM_Tick(){
+	switch(threeState)
 	{
 		case start:
-			state = lightA;
+			threeState = lightA;
 			break;
 		case lightA:
-			state = lightB;
+			threeState = lightB;
 			break;
 		case lightB:
-			state = lightC;
+			threeState = lightC;
 			break;
 		case light C:
-			state = lightA;
+			threeState = lightA;
 			break;
 	}
-	switch(state)
+	switch(threeState)
 	{
+		case start:
+			break;			
 		case lightA:
-			tmpB = 0x01;
+			ThreeLeds = 0x01;
 			break;
 		case lightB:
-			tmpB = 0x02;
+			ThreeLeds = 0x02;
 			break;
 		case lightC:
-			tmpB = 0x04;
+			ThreeLeds = 0x04;
 			break;
+	}
+}
+enum blinkingStates{on, off}blinkState;
+void BlinkingLedsSM_Tick(){
+	switch(blinkState){
+		case on:
+			blinkState = off;
+			break;
+		case off:
+			blinkState = on;
+			break;
+		}
+	switch(blinkState){
+		case on:
+			BlinkingLeds = 0x08;
+			break;
+		case off:
+			BlinkingLeds = 0x00;
+			break;
+		}
+}
+enum combineStates{combination}combineState;
+void CombineLedsSM_Tick(){
+	switch(combineState){
+		case combination:
+		break;
+	}
+	switch(combineState){
+		case combination:
+			tmpB = BlinkingLeds | ThreeLeds;
+		break;
 	}
 }
 int main(void) {
@@ -95,14 +130,17 @@ int main(void) {
 	PORTB = 0x00; //init port B to 0s
 	TimerSet(1000);
 	TimerOn();
-	unsigned char tmpB = 0x00;
-	state = start;
+	threeState = start;
+	combineState = combination;
+	blinkState = on;
     /* Insert your solution below */
     while (1) {
-	lightTick();
+	BlinkingLedsSM_Tick();
+	ThreeLedsSM_Tick();
+	CombineLedsSM_Tick();
+	PORTB = tmpB;
 	while (!TimerFlag); //wait 1 seec
 	TimerFlag = 0;
-	PORTB = tmpB;
     }
     return 0;
 }
